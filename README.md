@@ -157,3 +157,13 @@ python3 create_disassembly.py
 This script will run the d52 disassembler for every ctl file to which a
 corresponding fw file exists. All disassemblies will be written to a
 directory called "disassembly".
+
+# Information from disassembly
+
+Unverified information based on disassembly - USE AT YOUR OWN RISK!
+
+| Configuration | dvb-usb-dw2101.fw | dvb-usb-dw2102.fw   | dvb-usb-dw2104.fw   | dvb-usb-p1100.fw | dvb-usb-p7500.fw | dvb-usb-s630.fw  | dvb-usb-s660.fw  | TT connect S2 4600         |
+| ------------- | ----------------- | ------------------- | ------------------- | ---------------- | ---------------- | ---------------- | ---------------- | -------------------------- |
+| IFCONFIG      | 0xcb              | 0xcb                | 0xcb                | 0xcb             | 0xcb             | 0xcb             | 0xcb             | 0x13                       |
+| Used IVs      | RESUME, I2CINT    | IE1, RESUME, I2CINT | IE1, RESUME, I2CINT | IE0, TF1, RESUME | IE0, TF1, RESUME | IE0, TF1, RESUME | IE0, TF1, RESUME | TF0, IE1, TF1, TF2/EXF2, RESUME, I2CINT |
+| Used GPIOs    | PA, PD            | PA                  | PA                  | PA               | PA               | PA               | PA               | PA, PD                     |
