@@ -21,6 +21,7 @@ m 02 Selfpwr ; 20h.2
 m 01 GotSUD  ; 20h.1
 
 r 19 AlternateSetting ; rb3r1
+r 1a buffer_in_use    ; rb3r2
 r 1e Configuration    ; rb3r6
 
 l 0056 DR_VendorCmnd
@@ -52,22 +53,22 @@ b 0080
 w 0081
 a 0083
 l 031b vendorcmd_b2
-l 0396 vendorcmd_b2_ep0buf0_2a ; write to I2C address 0x68 + set bit 0x20.5
-l 03b3 vendorcmd_b2_ep0buf0_2c ; write to I2C address 0x68 and 0x60 + set bit 0x20.5
-l 03fc vendorcmd_b2_ep0buf0_2e ; read 1 byte from I2C address 0x60 to memory 0x0900 + set bit 0x20.5
-l 0411 vendorcmd_b2_ep0buf0_30 ; set/clear bit 0x20.6, set bit 0x20.5
-l 037b vendorcmd_b2_ep0buf0_32 ; EZUSB_WriteI2C addr=EP0BUF01 length=2 dat=&EP0BUF02 + set bit 0x20.5
-l 0427 vendorcmd_b3
-l 02fc vendorcmd_b5 ; write and read to I2C address 0x68
-l 02c4 vendorcmd_b6 ; I2C write and read to address SETUPDAT2 (=eeprom address)
-l 01c8 vendorcmd_b7 ; control port d
-l 0175 vendorcmd_b8
-l 0154 vendorcmd_b9
-l 010b vendorcmd_ba ; write and read to I2C address 0x7f
-l 00f4 vendorcmd_bb ; write to I2C address 0x7f
-l 00d2 vendorcmd_bc
+l 0396 vendorcmd_b2_ep0buf0_2a ; i2c_write address=0x68 numbytes=2 data=ep0buf[1..2] (ep0buf[1..2] is copied to 0x0009 before i2c write)
+l 03b3 vendorcmd_b2_ep0buf0_2c ; i2c_write address=0x60 numbytes=4 data=ep0buf[3..6] (ep0buf[2..6] copied to 0x0000 before i2c write)
+l 03fc vendorcmd_b2_ep0buf0_2e ; i2c_read  address=0x60 numbytes=1 to memory address 0x0005 (via 0x0009)
+l 0411 vendorcmd_b2_ep0buf0_30 ; control_gpio_pa6 (set if ep0buf[1] == 0 else clear)
+l 037b vendorcmd_b2_ep0buf0_32 ; i2c_write address=ep0buf[1] numbytes=2 data=epbuf[2..3]
+l 0427 vendorcmd_b3 ; if 20h.5 bit is set, get 3 bytes: b0=0x2f, b1=undefined, b2=memory address 0x0005 (if 20h.5 is not set, get byte 0x00)
+l 02fc vendorcmd_b5 ; i2c_write address=0x68 numbytes=1 data=SETUPDAT[2] + i2c_read address=0x68 numbytes=1 data=EP0BUF[0]
+l 02c4 vendorcmd_b6 ; i2c_write address=SETUPDAT[2] numbytes=SETUPDAT[3] data=SETUPDAT[4] + i2c_read address=SETUPDAT[2] numbytes=1 data=EP0BUF[2]
+l 01c8 vendorcmd_b7 ; control_port_d
+l 0175 vendorcmd_b8 ; get byte from buffer at 0xe756 (=EP0BUF[0x16], but seems to be used as IR reception buffer)
+l 0154 vendorcmd_b9 ; get 2 bytes: b0=USBCS, b1=1 if USBCS.7 (=USB high speed mode) is NOT set else 2
+l 010b vendorcmd_ba
+l 00f4 vendorcmd_bb
+l 00d2 vendorcmd_bc ; control_port_d
 l 00ba vendorcmd_bd
-l 0085 vendorcmd_be ; write to I2C address 0x7f
+l 0085 vendorcmd_be ; i2c_write address=0x7f
 l 046a vendorcmd_out
 
 l 0498 SetupCommand
@@ -107,21 +108,26 @@ c 063f-073d
 l 0cc0 usb_descriptor_data
 b 0cc0-0d45
 
-l 0003 EZUSB_Discon
+l 0df8 get_setupdat2
+
+l 0003 EZUSB_Discon ; really??
 l 0ecf EZUSB_Delay
 l 0eed EZUSB_Delay1ms
 l 0f4c EZUSB_Resume
 l 0ff8 EZUSB_SUSP
-; r7: left-shifted I2C address, r5: length, r3:r2: dat
-l 0fcf EZUSB_WriteI2C_
-l 0fa4 EZUSB_ReadI2C_
-l 1106 EZUSB_WriteI2C
-l 10ef EZUSB_ReadI2C
+l 0fcf EZUSB_WriteI2C_ ; i2caddr in r7, length in r5, data in r2:r3 (high:low)
+l 0fa4 EZUSB_ReadI2C_  ; i2caddr in r7, length in r5, data in r2:r3 (high:low)
+l 1106 EZUSB_WriteI2C  ; i2caddr in r7, length in r5, data in r2:r3 (high:low)
+l 10ef EZUSB_ReadI2C   ; i2caddr in r7, length in r5, data in r2:r3 (high:low)
+
+l 0deb get_buffered_ir_byte
 
 l 0e00 clr_USBINT_and_set_dptr_to_e65d
 
 l 0900 interrupt_autovectors
 c 0900-09ff
+
+l 11a9 control_gpio_pa6
 
 l 10a4 ISR_Sudav
 l 1145 ISR_Sof
