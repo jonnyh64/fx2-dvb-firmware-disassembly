@@ -162,8 +162,43 @@ directory called "disassembly".
 
 Unverified information based on disassembly - USE AT YOUR OWN RISK!
 
+## FX2(LP) configuration
+
 | Configuration | dvb-usb-dw2101.fw | dvb-usb-dw2102.fw   | dvb-usb-dw2104.fw   | dvb-usb-p1100.fw | dvb-usb-p7500.fw | dvb-usb-s630.fw  | dvb-usb-s660.fw  | TT connect S2 4600         |
 | ------------- | ----------------- | ------------------- | ------------------- | ---------------- | ---------------- | ---------------- | ---------------- | -------------------------- |
 | IFCONFIG      | 0xcb              | 0xcb                | 0xcb                | 0xcb             | 0xcb             | 0xcb             | 0xcb             | 0x13                       |
 | Used IVs      | RESUME, I2CINT    | IE1, RESUME, I2CINT | IE1, RESUME, I2CINT | IE0, TF1, RESUME | IE0, TF1, RESUME | IE0, TF1, RESUME | IE0, TF1, RESUME | TF0, IE1, TF1, TF2/EXF2, RESUME, I2CINT |
 | Used GPIOs    | PA, PD            | PA                  | PA                  | PA               | PA               | PA               | PA               | PA, PD                     |
+
+## I2C/GPIO communication protocol
+
+The host needs to talk to tuner, demod and GPIOs (e.g. for switching LEDs and satellite horizontal/vertical polarization control).
+In order to do this, the firmware needs to implement a protocol for the host for using the I2C bus and interacting with GPIOs.
+
+### dvbworld v1
+
+I have found this protocol in dvb-usb-dw2101.fw. I'm guessing that the company "dvbworld" implemented this and it was
+the first FX2 I2C/GPIO protocol they implemented, hence I call it "dvbworld v1". The firmwares dvb-usb-dw2102.fw and
+dvb-usb-dw2104.fw still support most of these commands, but also implement another protcol, which I will call "dvbworld v2".
+
+The protocol is based on USB control transfers of request type "vendor". The "request" field (which is a byte) controls
+which action is performed on behalf of the host.
+
+| request              | Description |
+| -------------------- | ----------- |
+| 0xb2 (data[0]==0x2a) | i2c_write address=0x68 numbytes=2 data=data[1..2] |
+| 0xb2 (data[0]==0x2c) | i2c_write address=0x60 numbytes=4 data=data[3..6]<br>(dvb-usb-dw2102.fw, dvb-usb-dw2104.fw: address is taken from data[2]) |
+| 0xb2 (data[0]==0x2e) | (only in dvb-usb-dw2101.fw)<br>i2c_read address=0x60 numbytes=1 (data is only read into memory, not returned in this control transfer) |
+| 0xb2 (data[0]==0x30) | control_gpio_pa6 (set if data[1] == 0 else clear) |
+| 0xb2 (data[0]==0x32) | i2c_write address=data[1] numbytes=2 data=data[2..3] |
+| 0xb3                 | (only in dvb-usb-dw2101.fw)<br>if 20h.5 bit is set, get 3 bytes: data[0]=0x2f, data[1]=undefined, data[2]=byte from request==0xb2/data[0]==0x2e<br>(if 20h.5 is not set, get byte 0x00) |
+| 0xb5                 | i2c_write address=0x68 numbytes=1 data=wValue_low + i2c_read address=0x68 numbytes=1 data returned in data[0] |
+| 0xb6                 | i2c_write address=wValue_low numbytes=wValue_high data=wIndex_low + i2c_read address=wValue_low numbytes=1 data returned in data[2]<br>(dvb-usb-dw2102.fw, dvb-usb-dw2104.fw: numbytes of i2c_write is always 1) |
+| 0xb7                 | (only in dvb-usb-dw2101.fw)<br>control port D |
+| 0xb8                 | get one byte from IR reception buffer |
+| 0xb9                 | get 2 bytes: data[0]=USBCS, data[1]=1 if USBCS.7 (=USB high speed mode) is NOT set else 2 |
+| 0xba                 | |
+| 0xbb                 | |
+| 0xbc                 | (only in dvb-usb-dw2101.fw)<br>control port D |
+| 0xbd                 | |
+| 0xbe                 | (only in dvb-usb-dw2101.fw)<br>i2c_write address=0x7f |
