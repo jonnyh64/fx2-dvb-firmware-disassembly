@@ -62,6 +62,11 @@ c2b9e373ec0362ceb00a57d9b1ec83b5  dvb-usb-s630.fw
 2946e99fe3a4973ba905fcf59111cf40  dvb-usb-s660.fw
 ```
 
+Note: You might find a dvb-usb-dw2104.fw file with MD5 sum ac3d9a7012f21bd0bbeedc776ba121e8,
+which is the wrong file. It was originally named dvb-usb-s650.fw and contained in an archive named
+Tevii_linuxdriver_0815.rar. For whatever reason, https://www.linuxtv.org/wiki/index.php/TeVii_S650
+suggests to rename it to dvb-usb-dw2104.fw.
+
 ## I2C EEPROM based firmware
 
 An FX2 I2C boot EEPROM will contain a magic number, USB VID/PID/DID and a
